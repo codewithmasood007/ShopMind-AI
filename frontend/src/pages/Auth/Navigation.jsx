@@ -13,8 +13,10 @@ import "./Navigation.css";
 import { useSelector, useDispatch } from "react-redux";
 import { useLogoutMutation } from "../../redux/api/usersApiSlice.js";
 import { logout } from "../../redux/features/auth/authSlice";
+import FavoritesCount from "../Products/FavoritesCount.jsx";
 const Navigation = () => {
   const { userInfo } = useSelector((state) => state.auth);
+  const {cartItems} = useSelector((state) => state.cart);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
 
@@ -47,7 +49,7 @@ const Navigation = () => {
       style={{ zIndex: 9999 }}
       className={`${
         showSidebar ? "hidden" : "flex"
-      } xl:flex lg:flex md:flex sm:hidden flex-col justify-between p-4 text-white bg-[#272e28] w-[4%] hover:w-[15%] h-[100vh]  fixed `}
+      } xl:flex lg:flex md:flex sm:hidden flex-col justify-between p-4 text-white bg-[#0b4b52] w-[4%] hover:w-[15%] h-[100vh]  fixed `}
       id="navigation-container"
     >
       <div className="flex flex-col justify-center space-y-4">
@@ -74,13 +76,23 @@ const Navigation = () => {
           <AiOutlineShoppingCart className="mt-[3rem] mr-2" size={26} />
           <span className="hidden nav-item-name mt-[3rem]">Cart</span>{" "}
         </Link>
+        <div className="absolute top-58">
+            {cartItems.length > 0 && (
+              <span>
+                <span className="px-1 py-0 text-sm bg-red-500 rounded-full">
+                  {cartItems.reduce((a, c) => a + c.qty, 0)}
+                </span>
+              </span>
+            )}
+          </div>
         <Link
-          to="/favourite"
+          to="/favorite"
           className="flex items-center transition-transform transform hover:translate-x-2"
         >
           <FaHeart className="mr-2 mt-[3rem]" size={26} />
           <span className="hidden nav-item-name mt-[3rem]">Favourite</span>{" "}
         </Link>
+        <FavoritesCount/>
       </div>
 
       <div className="relative">

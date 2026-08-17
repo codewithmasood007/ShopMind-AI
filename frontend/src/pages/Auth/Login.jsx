@@ -30,11 +30,11 @@ const Login = () => {
     try {
     const res = await login({ email, password }).unwrap();
 
-    console.log("API Response:", res);
+    // console.log("API Response:", res);
 
     dispatch(setCredentials(res));
 
-    console.log("After dispatch");
+    // console.log("After dispatch");
 
     navigate(redirect);
   } catch (err) {
