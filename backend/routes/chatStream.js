@@ -1,17 +1,14 @@
 import express from "express";
-import ollama from "ollama";
+import Groq from "groq-sdk";
 import { findRelevantProducts } from "../services/productService.js";
 
 const router = express.Router();
 
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
 router.post("/api/chat/stream", async (req, res) => {
   const { message } = req.body;
 
-  // console.log("=================================");
-  // console.log("CHAT REQUEST RECEIVED");
-  // console.log("MESSAGE:", message);
-
-  // Validate message
   if (!message || typeof message !== "string" || !message.trim()) {
     return res.status(400).json({
       message: "Message is required",
@@ -22,24 +19,17 @@ router.post("/api/chat/stream", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
-
   res.flushHeaders();
 
   try {
     // =========================
     // STEP 1: FIND PRODUCTS
     // =========================
-
-    // console.log("STEP 1: Finding products...");
-
     const products = await findRelevantProducts(message.trim());
-
-    // console.log("STEP 2: Products found:", products.length);
 
     // =========================
     // STEP 2: CREATE CONTEXT
     // =========================
-
     const contextText =
       products.length > 0
         ? products
@@ -56,9 +46,6 @@ Description: ${product.description || ""}
     // =========================
     // STEP 3: SEND PRODUCTS
     // =========================
-
-    // console.log("STEP 3: Sending metadata...");
-
     res.write(
       `data: ${JSON.stringify({
         type: "metadata",
@@ -67,11 +54,8 @@ Description: ${product.description || ""}
     );
 
     // =========================
-    // STEP 4: CALL LLAMA
+    // STEP 4: CALL GROQ (was: Llama via Ollama)
     // =========================
-
-    // console.log("STEP 4: Calling Llama...");
-
     const prompt = `
 You are a helpful ecommerce sales assistant.
 
@@ -92,29 +76,22 @@ Rules:
 - Keep the answer friendly and concise.
 `;
 
-    const response = await ollama.chat({
-      model: "llama3.2",
-
+    const stream = await groq.chat.completions.create({
+      model: "openai/gpt-oss-120b", // Groq-hosted Llama model, closest to your local llama3.2
       messages: [
         {
           role: "user",
           content: prompt,
         },
       ],
-
       stream: true,
     });
-
-    // console.log("STEP 5: Llama connected!");
 
     // =========================
     // STEP 5: STREAM RESPONSE
     // =========================
-
-    for await (const chunk of response) {
-      const text = chunk.message?.content;
-
-      // console.log("LLAMA CHUNK:", text);
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content || "";
 
       if (text) {
         res.write(
@@ -129,16 +106,10 @@ Rules:
     // =========================
     // STEP 6: FINISH
     // =========================
-
-    // console.log("STEP 6: Llama finished");
-
     res.write("data: [DONE]\n\n");
-
     res.end();
-
-    // console.log("STEP 7: Response ended");
   } catch (error) {
-    console.error("Llama streaming error:", error);
+    console.error("Groq streaming error:", error);
 
     if (!res.headersSent) {
       return res.status(500).json({
@@ -152,9 +123,7 @@ Rules:
         error: error.message,
       })}\n\n`
     );
-
     res.write("data: [DONE]\n\n");
-
     res.end();
   }
 });

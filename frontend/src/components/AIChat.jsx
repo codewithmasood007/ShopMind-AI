@@ -166,7 +166,7 @@ const AIChat = () => {
               </h2>
 
               <p className="text-xs">
-                Powered by Llama 3.2
+                Powered by Groq
               </p>
             </div>
 

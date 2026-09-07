@@ -1,28 +1,21 @@
-import path from "path";
+
 import express from "express";
 import multer from "multer";
-
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import cloudinary from "../config/cloudinary.js";
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(process.cwd(), "uploads"));
-  },
-
-  filename: (req, file, cb) => {
-    const extname = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${Date.now()}${extname}`);
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "shopmindai-products",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
 });
 
 const fileFilter = (req, file, cb) => {
-  const filetypes = /jpe?g|png|webp/;
   const mimetypes = /image\/jpe?g|image\/png|image\/webp/;
-
-  const extname = path.extname(file.originalname).toLowerCase();
-  const mimetype = file.mimetype;
-
-  if (filetypes.test(extname) && mimetypes.test(mimetype)) {
+  if (mimetypes.test(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error("Images only"), false);
@@ -39,7 +32,7 @@ router.post("/", (req, res) => {
     } else if (req.file) {
       res.status(200).send({
         message: "Image uploaded successfully",
-        image: `/uploads/${req.file.filename}`,
+        image: req.file.path, // this is now the full Cloudinary URL
       });
     } else {
       res.status(400).send({ message: "No image file provided" });
