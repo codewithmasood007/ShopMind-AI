@@ -27,6 +27,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://shop-mind-ai-git-main-masoodsahil007-7356s-projects.vercel.app",
+      "https://shop-mind-ai-psi.vercel.app",
     ],
     credentials: true,
   })

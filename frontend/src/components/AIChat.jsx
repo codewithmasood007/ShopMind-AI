@@ -1,3 +1,4 @@
+import { BASE_URL } from "../redux/constants.js"
 import { useState } from "react";
 
 const AIChat = () => {
@@ -31,20 +32,19 @@ const AIChat = () => {
       },
     ]);
 
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/chat/stream",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: userMessage,
-          }),
-        }
-      );
-
+try {
+  const response = await fetch(
+    `${BASE_URL}/api/chat/stream`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: userMessage,
+      }),
+    }
+  );
       if (!response.ok) {
         throw new Error("Failed to connect to AI");
       }
