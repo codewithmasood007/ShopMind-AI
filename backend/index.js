@@ -24,7 +24,10 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://shop-mind-ai-git-main-masoodsahil007-7356s-projects.vercel.app",
+    ],
     credentials: true,
   })
 );
