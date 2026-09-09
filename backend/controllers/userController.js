@@ -65,9 +65,12 @@ const currLogoutUser = asyncHandler(async (req, res) => {
   res.cookie("jwt", "", {
     httpOnly: true,
     expires: new Date(0),
+    secure: process.env.NODE_ENV !== "development",
+    sameSite: process.env.NODE_ENV !== "development" ? "none" : "lax",
   });
   res.status(200).json({ message: "logout successfully" });
 });
+
 const getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.find({});
   res.json(users);
