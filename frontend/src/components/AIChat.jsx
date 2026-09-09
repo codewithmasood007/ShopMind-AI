@@ -1,28 +1,44 @@
-import { BASE_URL } from "../redux/constants.js"
-import { useState } from "react";
+import { BASE_URL } from "../redux/constants.js";
+import { useRef, useState } from "react";
 
 const AIChat = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  const fileInputRef = useRef(null);
 
   const sendMessage = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() && !selectedImage) return;
 
     const userMessage = message.trim();
+    const image = selectedImage;
 
-    // Add user message
+    // =========================
+    // USER MESSAGE
+    // =========================
+
     setMessages((prev) => [
       ...prev,
       {
         role: "user",
         content: userMessage,
+        image: image ? URL.createObjectURL(image) : null,
       },
     ]);
 
     setMessage("");
+    setSelectedImage(null);
 
-    // Create empty AI message
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    // =========================
+    // EMPTY AI MESSAGE
+    // =========================
+
     setMessages((prev) => [
       ...prev,
       {
@@ -32,22 +48,40 @@ const AIChat = () => {
       },
     ]);
 
-try {
-  const response = await fetch(
-    `${BASE_URL}/api/chat/stream`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: userMessage,
-      }),
-    }
-  );
+    try {
+      // =========================
+      // FORM DATA
+      // =========================
+
+      const formData = new FormData();
+
+      if (userMessage) {
+        formData.append("message", userMessage);
+      }
+
+      if (image) {
+        formData.append("image", image);
+      }
+
+      // =========================
+      // REQUEST
+      // =========================
+
+      const response = await fetch(
+        `${BASE_URL}/api/chat/stream`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
       if (!response.ok) {
         throw new Error("Failed to connect to AI");
       }
+
+      // =========================
+      // SSE STREAM
+      // =========================
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -81,49 +115,78 @@ try {
           try {
             const parsed = JSON.parse(data);
 
+            // =========================
+            // PRODUCTS
+            // =========================
+
             if (parsed.type === "metadata") {
               setMessages((prev) => {
                 const updated = [...prev];
 
-                const lastMessage = updated[updated.length - 1];
+                const lastMessage =
+                  updated[updated.length - 1];
 
                 if (lastMessage?.role === "assistant") {
-                  lastMessage.products = parsed.products || [];
+                  updated[updated.length - 1] = {
+                    ...lastMessage,
+                    products: parsed.products || [],
+                  };
                 }
 
                 return updated;
               });
             }
+
+            // =========================
+            // AI TEXT
+            // =========================
 
             if (parsed.type === "text") {
               setMessages((prev) => {
                 const updated = [...prev];
 
-                const lastMessage = updated[updated.length - 1];
+                const lastMessage =
+                  updated[updated.length - 1];
 
                 if (lastMessage?.role === "assistant") {
-                  lastMessage.content += parsed.chunk;
+                  updated[updated.length - 1] = {
+                    ...lastMessage,
+                    content:
+                      lastMessage.content +
+                      parsed.chunk,
+                  };
                 }
 
                 return updated;
               });
             }
 
+            // =========================
+            // ERROR
+            // =========================
+
             if (parsed.type === "error") {
               setMessages((prev) => {
                 const updated = [...prev];
 
-                const lastMessage = updated[updated.length - 1];
+                const lastMessage =
+                  updated[updated.length - 1];
 
                 if (lastMessage?.role === "assistant") {
-                  lastMessage.content = parsed.error;
+                  updated[updated.length - 1] = {
+                    ...lastMessage,
+                    content: parsed.error,
+                  };
                 }
 
                 return updated;
               });
             }
           } catch (error) {
-            console.error("SSE parsing error:", error);
+            console.error(
+              "SSE parsing error:",
+              error
+            );
           }
         }
       }
@@ -133,11 +196,15 @@ try {
       setMessages((prev) => {
         const updated = [...prev];
 
-        const lastMessage = updated[updated.length - 1];
+        const lastMessage =
+          updated[updated.length - 1];
 
         if (lastMessage?.role === "assistant") {
-          lastMessage.content =
-            "Sorry, I couldn't connect to the AI assistant.";
+          updated[updated.length - 1] = {
+            ...lastMessage,
+            content:
+              "Sorry, I couldn't connect to the AI assistant.",
+          };
         }
 
         return updated;
@@ -145,9 +212,27 @@ try {
     }
   };
 
+  // =========================
+  // IMAGE SELECT
+  // =========================
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image");
+      return;
+    }
+
+    setSelectedImage(file);
+  };
+
   return (
     <>
       {/* Floating Button */}
+
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-pink-500 text-2xl shadow-lg transition hover:scale-105"
@@ -156,9 +241,12 @@ try {
       </button>
 
       {/* Chat Window */}
+
       {isOpen && (
         <div className="fixed bottom-24 right-6 z-50 flex h-[600px] w-[380px] flex-col overflow-hidden rounded-xl bg-gray-900 text-white shadow-2xl">
+
           {/* Header */}
+
           <div className="flex items-center justify-between bg-pink-500 p-4">
             <div>
               <h2 className="font-bold">
@@ -179,7 +267,9 @@ try {
           </div>
 
           {/* Messages */}
+
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
+
             {messages.length === 0 && (
               <div className="text-center text-gray-400">
                 <p className="text-lg">
@@ -208,13 +298,26 @@ try {
                       : "max-w-[90%] rounded-lg bg-gray-800 p-3"
                   }
                 >
+
+                  {/* User uploaded image */}
+
+                  {msg.image && (
+                    <img
+                      src={msg.image}
+                      alt="Uploaded"
+                      className="mb-2 max-h-48 rounded-lg object-cover"
+                    />
+                  )}
+
                   <p className="whitespace-pre-wrap text-sm">
                     {msg.content}
                   </p>
 
                   {/* Products */}
+
                   {msg.products?.length > 0 && (
                     <div className="mt-3 space-y-2">
+
                       {msg.products.map((product) => (
                         <div
                           key={product._id}
@@ -233,19 +336,49 @@ try {
                           </p>
                         </div>
                       ))}
+
                     </div>
                   )}
+
                 </div>
               </div>
             ))}
+
           </div>
 
           {/* Input */}
+
           <div className="flex border-t border-gray-700 p-3">
+
+            {/* Hidden image input */}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+
+            {/* Image button */}
+
+            <button
+              type="button"
+              onClick={() =>
+                fileInputRef.current?.click()
+              }
+              className="mr-2 rounded-lg bg-gray-800 px-3 text-lg hover:bg-gray-700"
+              title="Upload image"
+            >
+              📷
+            </button>
+
             <input
               type="text"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) =>
+                setMessage(e.target.value)
+              }
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   sendMessage();
@@ -261,7 +394,9 @@ try {
             >
               Send
             </button>
+
           </div>
+
         </div>
       )}
     </>

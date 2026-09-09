@@ -37,6 +37,7 @@ const Shop = () => {
         // Filter products based on both checked categories and price filter
         const filteredProducts = filteredProductsQuery.data.filter(
           (product) => {
+            
             // Check if the product price includes the entered price filter value
             return (
               product.price.toString().includes(priceFilter) ||
@@ -139,7 +140,7 @@ const Shop = () => {
             </div>
 
             <h2 className="h4 text-center py-2 bg-black rounded-full mb-2">
-              Filer by Price
+              Filter by Price
             </h2>
 
             <div className="p-5 w-[15rem]">
@@ -148,7 +149,7 @@ const Shop = () => {
                 placeholder="Enter Price"
                 value={priceFilter}
                 onChange={handlePriceChange}
-                className="w-full px-3 py-2 placeholder-gray-400 border rounded-lg focus:outline-none focus:ring focus:border-pink-300"
+                className="w-full px-3 py-2 placeholder-gray-400 border rounded-lg focus:outline-none focus:ring focus:border-pink-300 text-black"
               />
             </div>
 
